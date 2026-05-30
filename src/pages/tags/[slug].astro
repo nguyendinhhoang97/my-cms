@@ -1,0 +1,67 @@
+---
+/**
+ * Danh sách bài theo tag.
+ */
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import PostCard from '../../components/blog/PostCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { getDb } from '../../lib/db';
+import { getPostsByTag } from '../../lib/db/posts';
+import { getTagBySlug } from '../../lib/db/tags';
+import { absoluteUrl } from '../../lib/seo/config';
+import { escapeHtml } from '../../lib/security';
+
+export const prerender = false;
+
+const slug = Astro.params.slug ?? '';
+const origin = Astro.url.origin;
+const db = getDb();
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+
+const tag = await getTagBySlug(db, slug);
+if (!tag) return Astro.redirect('/tags');
+
+const result = await getPostsByTag(db, slug, page, 10, 'published');
+const { items, pagination } = result!;
+
+const pageUrl =
+	page > 1
+		? absoluteUrl(origin, `/tags/${slug}?page=${page}`)
+		: absoluteUrl(origin, `/tags/${slug}`);
+
+const breadcrumbItems = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Tags', href: '/tags' },
+	{ label: tag.name },
+];
+---
+
+<BlogLayout
+	title={`#${tag.name}`}
+	description={`Bài viết gắn thẻ ${tag.name} trên my-cms blog`}
+	url={pageUrl}
+	keywords={[tag.name, 'tag', 'thẻ']}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+
+	<header class="mb-8">
+		<h1 class="text-3xl font-bold">#{escapeHtml(tag.name)}</h1>
+	</header>
+
+	{
+		items.length === 0 ? (
+			<p class="opacity-60">Chưa có bài viết với thẻ này.</p>
+		) : (
+			<div class="space-y-6">
+				{items.map((post) => (
+					<PostCard post={post} />
+				))}
+			</div>
+		)
+	}
+
+	<Pagination page={pagination.page} totalPages={pagination.totalPages} baseUrl={`/tags/${slug}`} />
+</BlogLayout>

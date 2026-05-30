@@ -1,0 +1,72 @@
+---
+/**
+ * Danh sách bài theo category.
+ */
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import PostCard from '../../components/blog/PostCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { getCategoryBySlug } from '../../lib/db/categories';
+import { getDb } from '../../lib/db';
+import { getPostsByCategory } from '../../lib/db/posts';
+import { absoluteUrl } from '../../lib/seo/config';
+import { escapeHtml } from '../../lib/security';
+
+export const prerender = false;
+
+const slug = Astro.params.slug ?? '';
+const origin = Astro.url.origin;
+const db = getDb();
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+
+const category = await getCategoryBySlug(db, slug);
+if (!category) return Astro.redirect('/categories');
+
+const result = await getPostsByCategory(db, slug, page, 10, 'published');
+const { items, pagination } = result!;
+
+const pageUrl =
+	page > 1
+		? absoluteUrl(origin, `/categories/${slug}?page=${page}`)
+		: absoluteUrl(origin, `/categories/${slug}`);
+
+const breadcrumbItems = [
+	{ label: 'Home', href: '/' },
+	{ label: 'Categories', href: '/categories' },
+	{ label: category.name },
+];
+---
+
+<BlogLayout
+	title={category.name}
+	description={category.description ?? `Bài viết trong chuyên mục ${category.name}`}
+	url={pageUrl}
+	keywords={[category.name, 'chuyên mục', 'category']}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+
+	<header class="mb-8">
+		<h1 class="text-3xl font-bold">{escapeHtml(category.name)}</h1>
+		{category.description && <p class="mt-2 opacity-70">{escapeHtml(category.description)}</p>}
+	</header>
+
+	{
+		items.length === 0 ? (
+			<p class="opacity-60">Chưa có bài viết trong chuyên mục này.</p>
+		) : (
+			<div class="space-y-6">
+				{items.map((post) => (
+					<PostCard post={post} />
+				))}
+			</div>
+		)
+	}
+
+	<Pagination
+		page={pagination.page}
+		totalPages={pagination.totalPages}
+		baseUrl={`/categories/${slug}`}
+	/>
+</BlogLayout>

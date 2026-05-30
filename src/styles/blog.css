@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Prism — dark (default) + light theme */
+@import "prismjs/themes/prism-tomorrow.css";
+
+html.blog-light .blog-prose pre[class*="language-"],
+html.blog-light .blog-prose code[class*="language-"] {
+	@apply bg-slate-100 text-slate-900;
+}
+html.blog-light .blog-prose pre[class*="language-"] {
+	@apply border border-slate-200;
+}
+html.blog-light .blog-prose :not(pre) > code[class*="language-"] {
+	@apply bg-slate-100 text-pink-600;
+}
+
+html.blog-light {
+	color-scheme: light;
+}
+html.blog-dark {
+	color-scheme: dark;
+}
+
+.blog-body {
+	@apply min-h-screen bg-slate-50 text-slate-900 transition-colors;
+}
+html.blog-dark .blog-body {
+	@apply bg-slate-950 text-slate-100;
+}
+
+/* Article prose */
+.blog-prose {
+	@apply leading-relaxed;
+}
+.blog-prose h1,
+.blog-prose h2,
+.blog-prose h3 {
+	@apply scroll-mt-24 font-bold tracking-tight;
+}
+html.blog-light .blog-prose h1,
+html.blog-light .blog-prose h2,
+html.blog-light .blog-prose h3 {
+	@apply text-slate-900;
+}
+html.blog-dark .blog-prose h1,
+html.blog-dark .blog-prose h2,
+html.blog-dark .blog-prose h3 {
+	@apply text-slate-100;
+}
+.blog-prose h1 { @apply mb-4 mt-8 text-3xl; }
+.blog-prose h2 { @apply mb-3 mt-8 text-2xl; }
+.blog-prose h3 { @apply mb-2 mt-6 text-xl; }
+.blog-prose p { @apply my-4; }
+.blog-prose a { @apply text-indigo-600 underline hover:text-indigo-500; }
+html.blog-dark .blog-prose a { @apply text-indigo-400; }
+.blog-prose ul,
+.blog-prose ol { @apply my-4 list-inside list-disc pl-4; }
+.blog-prose blockquote {
+	@apply my-4 border-l-4 border-indigo-500 pl-4 italic opacity-80;
+}
+.blog-prose pre {
+	@apply my-4 overflow-x-auto rounded-lg p-4 text-sm;
+}
+html.blog-light .blog-prose pre:not([class*='language-']) {
+	@apply bg-slate-900 text-slate-100;
+}
+html.blog-dark .blog-prose pre {
+	@apply bg-slate-900;
+}
+.blog-prose code:not(pre code) {
+	@apply rounded bg-slate-200 px-1.5 py-0.5 text-sm text-pink-600;
+}
+html.blog-dark .blog-prose code:not(pre code) {
+	@apply bg-slate-800 text-pink-300;
+}
+.blog-prose img {
+	@apply my-6 max-w-full rounded-xl;
+}
+
+/* Card */
+.blog-card {
+	@apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md;
+}
+html.blog-dark .blog-card {
+	@apply border-slate-800 bg-slate-900/60;
+}

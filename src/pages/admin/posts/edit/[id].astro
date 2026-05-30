@@ -1,0 +1,38 @@
+---
+/**
+ * Chỉnh sửa bài viết theo id.
+ */
+import AuthGuard from '../../../../components/AuthGuard.astro';
+import PostForm from '../../../../components/admin/PostForm.astro';
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import { getAllCategories } from '../../../../lib/db/categories';
+import { getPostById } from '../../../../lib/db/posts';
+import { getAllTags } from '../../../../lib/db/tags';
+import { getDb } from '../../../../lib/db';
+import { z } from 'zod';
+
+export const prerender = false;
+
+const idParsed = z.coerce.number().int().positive().safeParse(Astro.params.id);
+if (!idParsed.success) {
+	return Astro.redirect('/admin/posts');
+}
+
+const db = getDb();
+const post = await getPostById(db, idParsed.data);
+
+if (!post) {
+	return Astro.redirect('/admin/posts');
+}
+
+const [categories, tags] = await Promise.all([
+	getAllCategories(db),
+	getAllTags(db),
+]);
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Sửa bài viết" description={`#${post.id}`}>
+		<PostForm mode="edit" categories={categories} tags={tags} post={post} />
+	</AdminLayout>
+</AuthGuard>

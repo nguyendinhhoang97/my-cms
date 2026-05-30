@@ -1,0 +1,93 @@
+---
+/**
+ * Tìm kiếm bài viết.
+ */
+import BlogLayout from '../layouts/BlogLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import PostCard from '../components/blog/PostCard.astro';
+import Pagination from '../components/Pagination.astro';
+import { getDb } from '../lib/db';
+import { searchPublishedPosts } from '../lib/db/posts';
+import { absoluteUrl } from '../lib/seo/config';
+import { escapeHtml } from '../lib/security';
+
+export const prerender = false;
+
+const origin = Astro.url.origin;
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+const db = getDb();
+
+let items: Awaited<ReturnType<typeof searchPublishedPosts>>['items'] = [];
+let pagination = { page: 1, totalPages: 1, total: 0, limit: 10 };
+
+if (q.length >= 2) {
+	const result = await searchPublishedPosts(db, q, page, 10);
+	items = result.items;
+	pagination = result.pagination;
+}
+
+const searchParams = new URLSearchParams();
+if (q) searchParams.set('q', q);
+if (page > 1) searchParams.set('page', String(page));
+const qs = searchParams.toString();
+const pageUrl = absoluteUrl(origin, qs ? `/search?${qs}` : '/search');
+---
+
+<BlogLayout
+	title={q ? `Tìm kiếm: ${q}` : 'Tìm kiếm'}
+	description="Tìm bài viết trên my-cms blog"
+	url={pageUrl}
+	noindex={true}
+>
+	<Breadcrumb items={[{ label: 'Home', href: '/' }, { label: 'Tìm kiếm' }]} />
+
+	<h1 class="mb-6 text-2xl font-bold">Tìm kiếm</h1>
+
+	<form method="get" action="/search" class="mb-8 flex gap-2">
+		<input
+			type="search"
+			name="q"
+			value={q}
+			placeholder="Nhập từ khóa..."
+			minlength="2"
+			required
+			class="flex-1 rounded-xl border border-slate-300 bg-transparent px-4 py-2.5 text-sm dark:border-slate-700"
+		/>
+		<button
+			type="submit"
+			class="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+		>
+			Tìm
+		</button>
+	</form>
+
+	{
+		q.length >= 2 && (
+			<>
+				<p class="mb-6 text-sm opacity-60">
+					{pagination.total} kết quả cho &quot;{escapeHtml(q)}&quot;
+				</p>
+				{items.length === 0 ? (
+					<p class="opacity-60">Không tìm thấy bài viết phù hợp.</p>
+				) : (
+					<div class="space-y-6">
+						{items.map((post) => (
+							<PostCard post={post} />
+						))}
+					</div>
+				)}
+				<Pagination
+					page={pagination.page}
+					totalPages={pagination.totalPages}
+					baseUrl="/search"
+					queryParams={{ q }}
+				/>
+			</>
+		)
+	}
+
+	{q.length > 0 && q.length < 2 && (
+		<p class="text-sm text-amber-600 dark:text-amber-400">Nhập ít nhất 2 ký tự.</p>
+	)}
+</BlogLayout>

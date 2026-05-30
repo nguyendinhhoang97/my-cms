@@ -1,0 +1,51 @@
+---
+/**
+ * @component JsonLd
+ * JSON-LD structured data — Website, BlogPosting, BreadcrumbList.
+ */
+import type { BreadcrumbItem } from './Breadcrumb.astro';
+import {
+	buildBlogPostingSchema,
+	buildBreadcrumbSchema,
+	buildWebsiteSchema,
+} from '../lib/seo/jsonld';
+
+type SchemaKind = 'website' | 'blogPosting' | 'breadcrumbList';
+
+interface BlogPostingData {
+	title: string;
+	slug: string;
+	excerpt: string | null;
+	content: string;
+	featuredImage: string | null;
+	publishedAt: string | null;
+	updatedAt: string;
+}
+
+interface Props {
+	kind: SchemaKind;
+	origin: string;
+	/** BreadcrumbList */
+	items?: BreadcrumbItem[];
+	/** BlogPosting */
+	post?: BlogPostingData;
+}
+
+const { kind, origin, items = [], post } = Astro.props;
+
+let schema: Record<string, unknown>;
+
+if (kind === 'website') {
+	schema = buildWebsiteSchema(origin);
+} else if (kind === 'blogPosting' && post) {
+	schema = buildBlogPostingSchema(origin, post);
+} else if (kind === 'breadcrumbList') {
+	schema = buildBreadcrumbSchema(origin, items);
+} else {
+	schema = {};
+}
+---
+
+{Object.keys(schema).length > 0 && (
+	<script type="application/ld+json" set:html={JSON.stringify(schema)} />
+)}

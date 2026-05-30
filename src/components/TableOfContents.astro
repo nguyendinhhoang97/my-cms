@@ -1,0 +1,49 @@
+---
+/**
+ * Mục lục tự động — sidebar / mobile, scroll spy.
+ */
+import type { TocHeading } from '../lib/markdown';
+
+interface Props {
+	headings: TocHeading[];
+}
+
+const { headings } = Astro.props;
+
+/** Chỉ hiển thị h2, h3 trong TOC */
+const tocItems = headings.filter((h) => h.level >= 2 && h.level <= 3);
+
+if (tocItems.length <= 3) {
+	return null;
+}
+---
+
+<aside
+	class="mb-8 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/50 lg:sticky lg:top-24"
+>
+	<h2 class="mb-3 text-sm font-semibold uppercase tracking-wide opacity-60">
+		Mục lục
+	</h2>
+	<nav id="toc-nav" aria-label="Mục lục">
+		<ul class="space-y-2 text-sm">
+			{
+				tocItems.map((h) => (
+					<li class:list={[h.level === 3 && 'ml-4']}>
+						<a
+							href={`#${h.id}`}
+							data-toc-link
+							class="opacity-80 transition hover:text-indigo-500 hover:underline"
+						>
+							{h.text}
+						</a>
+					</li>
+				))
+			}
+		</ul>
+	</nav>
+</aside>
+
+<script>
+	import { initTocScrollSpy } from '../scripts/toc-scroll-spy';
+	initTocScrollSpy('toc-nav');
+</script>

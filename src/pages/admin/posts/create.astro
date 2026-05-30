@@ -1,0 +1,25 @@
+---
+/**
+ * Tạo bài viết mới.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import PostForm from '../../../components/admin/PostForm.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getAllCategories } from '../../../lib/db/categories';
+import { getAllTags } from '../../../lib/db/tags';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb();
+const [categories, tags] = await Promise.all([
+	getAllCategories(db),
+	getAllTags(db),
+]);
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Tạo bài viết" description="Markdown + live preview">
+		<PostForm mode="create" categories={categories} tags={tags} />
+	</AdminLayout>
+</AuthGuard>

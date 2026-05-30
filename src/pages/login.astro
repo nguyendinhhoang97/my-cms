@@ -1,0 +1,157 @@
+---
+/**
+ * Trang đăng nhập — form POST tới /api/auth/login với CSRF.
+ */
+import AuthLayout from '../layouts/AuthLayout.astro';
+
+export const prerender = false;
+
+const csrfToken = Astro.locals.csrfToken;
+const redirect = Astro.url.searchParams.get('redirect') ?? '';
+const registered = Astro.url.searchParams.get('registered') === '1';
+const error = Astro.url.searchParams.get('error');
+const forbidden = error === 'forbidden';
+
+// Nếu đã đăng nhập → chuyển hướng
+if (Astro.locals.user) {
+	const target =
+		redirect && redirect.startsWith('/') && !redirect.startsWith('//')
+			? redirect
+			: Astro.locals.user.role === 'admin'
+				? '/admin'
+				: '/';
+	return Astro.redirect(target);
+}
+
+const errorMessage = forbidden
+	? 'Bạn không có quyền truy cập khu vực này.'
+	: '';
+---
+
+<AuthLayout title="Đăng nhập" subtitle="Quản trị nội dung my-cms">
+	<div id="error-message" class="hidden mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert"></div>
+	
+	{registered && (
+		<div
+			class="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+			role="status"
+		>
+			Đăng ký thành công. Vui lòng đăng nhập.
+		</div>
+	)}
+	
+	{errorMessage && (
+		<div
+			class="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+			role="alert"
+		>
+			{errorMessage}
+		</div>
+	)}
+
+	<form method="post" class="space-y-5" id="login-form">
+		<input type="hidden" name="csrf_token" value={csrfToken} />
+		{redirect && <input type="hidden" name="redirect" value={redirect} />}
+
+		<div>
+			<label for="username" class="mb-1.5 block text-sm font-medium text-slate-300">
+				Username hoặc Email
+			</label>
+			<input
+				id="username"
+				name="username"
+				type="text"
+				autocomplete="username"
+				required
+				minlength="3"
+				maxlength="32"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+				placeholder="ten_dang_nhap hoac email"
+			/>
+		</div>
+
+		<div>
+			<label for="password" class="mb-1.5 block text-sm font-medium text-slate-300">
+				Mật khẩu
+			</label>
+			<input
+				id="password"
+				name="password"
+				type="password"
+				autocomplete="current-password"
+				required
+				minlength="8"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+				placeholder="••••••••"
+			/>
+		</div>
+
+		<button
+			type="submit"
+			id="submit-btn"
+			class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+		>
+			Đăng nhập
+		</button>
+	</form>
+
+	<p class="mt-6 text-center text-sm text-slate-400">
+		Chưa có tài khoản?
+		<a href="/register" class="font-medium text-indigo-400 hover:text-indigo-300">
+			Đăng ký
+		</a>
+	</p>
+</AuthLayout>
+
+<script>
+  document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const form = e.target;
+    const submitBtn = document.getElementById('submit-btn');
+    const errorDiv = document.getElementById('error-message');
+    
+    // Disable button và hiển thị loading
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Đang đăng nhập...';
+    errorDiv.classList.add('hidden');
+    
+    const formData = new FormData(form);
+    const data = {
+      username: formData.get('username'),
+      password: formData.get('password'),
+      csrf_token: formData.get('csrf_token'),
+      redirect: formData.get('redirect') || ''
+    };
+    
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Đăng nhập thành công, redirect
+        const redirectUrl = data.redirect || (result.user?.role === 'admin' ? '/admin' : '/');
+        window.location.href = redirectUrl;
+      } else {
+        // Hiển thị lỗi
+        errorDiv.textContent = result.error || 'Đăng nhập thất bại';
+        errorDiv.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Đăng nhập';
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      errorDiv.textContent = 'Lỗi kết nối, vui lòng thử lại';
+      errorDiv.classList.remove('hidden');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Đăng nhập';
+    }
+  });
+</script>

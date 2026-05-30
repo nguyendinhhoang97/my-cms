@@ -1,0 +1,72 @@
+---
+/**
+ * Sidebar menu admin — responsive.
+ */
+interface NavItem {
+	href: string;
+	label: string;
+	icon: string;
+	match: 'exact' | 'prefix';
+}
+
+interface Props {
+	currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const nav: NavItem[] = [
+	{ href: '/admin', label: 'Tổng quan', icon: '◉', match: 'exact' },
+	{ href: '/admin/posts', label: 'Bài viết', icon: '✎', match: 'prefix' },
+	{ href: '/admin/media', label: 'Media', icon: '▣', match: 'prefix' },
+	{ href: '/admin/comments', label: 'Bình luận', icon: '💬', match: 'prefix' },
+	{ href: '/admin/contacts', label: 'Liên hệ', icon: '✉', match: 'prefix' },
+	{ href: '/admin/newsletter', label: 'Newsletter', icon: '📧', match: 'prefix' },
+	{ href: '/admin/categories', label: 'Categories', icon: '▤', match: 'prefix' },
+	{ href: '/admin/tags', label: 'Tags', icon: '⌗', match: 'prefix' },
+	{ href: '/admin/users', label: 'Người dùng', icon: '👥', match: 'prefix' },
+	{ href: '/admin/settings', label: 'Cài đặt', icon: '⚙', match: 'prefix' },
+	{ href: '/admin/backup', label: 'Backup', icon: '💾', match: 'prefix' },
+];
+
+function isActive(item: NavItem): boolean {
+	if (item.match === 'exact') return currentPath === item.href;
+	return currentPath.startsWith(item.href);
+}
+---
+
+<aside id="admin-sidebar" class="admin-sidebar">
+	<div class="flex h-14 items-center border-b border-slate-800 px-4 lg:h-16">
+		<a href="/admin" class="text-lg font-bold tracking-tight text-white">my-cms</a>
+	</div>
+
+	<nav class="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Admin">
+		{
+			nav.map((item) => (
+				<a
+					href={item.href}
+					class:list={[
+						'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition',
+						isActive(item)
+							? 'bg-indigo-600/20 text-indigo-300'
+							: 'text-slate-400 hover:bg-slate-800 hover:text-slate-100',
+					]}
+				>
+					<span class="w-5 text-center text-base opacity-70" aria-hidden="true">
+						{item.icon}
+					</span>
+					{item.label}
+				</a>
+			))
+		}
+	</nav>
+
+	<div class="border-t border-slate-800 p-3">
+		<a
+			href="/"
+			class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-500 transition hover:bg-slate-800 hover:text-slate-300"
+		>
+			← Về trang chủ
+		</a>
+	</div>
+</aside>

@@ -1,0 +1,45 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import { getAllCategories } from '../../lib/db/categories';
+import { getDb } from '../../lib/db';
+import { absoluteUrl } from '../../lib/seo/config';
+import { escapeHtml } from '../../lib/security';
+
+export const prerender = false;
+
+const origin = Astro.url.origin;
+const db = getDb();
+const categories = await getAllCategories(db);
+const pageUrl = absoluteUrl(origin, '/categories');
+const breadcrumbItems = [{ label: 'Home', href: '/' }, { label: 'Categories' }];
+---
+
+<BlogLayout
+	title="Categories"
+	description="Tất cả chuyên mục trên my-cms blog"
+	url={pageUrl}
+	keywords={['chuyên mục', 'categories', ...categories.map((c) => c.name)]}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+	<h1 class="mb-8 text-3xl font-bold">Categories</h1>
+	<ul class="grid gap-4 sm:grid-cols-2">
+		{
+			categories.map((cat) => (
+				<li>
+					<a
+						href={`/categories/${cat.slug}`}
+						class="blog-card block p-5 transition hover:border-indigo-500/40"
+					>
+						<h2 class="font-semibold">{escapeHtml(cat.name)}</h2>
+						{cat.description && (
+							<p class="mt-1 line-clamp-2 text-sm opacity-70">{escapeHtml(cat.description)}</p>
+						)}
+					</a>
+				</li>
+			))
+		}
+	</ul>
+</BlogLayout>

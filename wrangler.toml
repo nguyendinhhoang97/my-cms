@@ -1,0 +1,30 @@
+# =============================================================================
+# my-cms — Cloudflare Workers / D1 / R2
+# =============================================================================
+# Production: thay database_id bằng ID thật từ `npx wrangler d1 create my-cms-db`
+# Astro adapter tự set worker entry (dist/server/entry.mjs) khi deploy.
+
+name = "my-cms"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Workers Assets — Astro build output (adapter tự liên kết khi deploy)
+# main = "dist/server/entry.mjs"  # do @astrojs/cloudflare quản lý
+
+[[d1_databases]]
+binding = "DB"
+database_name = "my-cms-db"
+database_id = "00000000-0000-0000-0000-000000000001"
+migrations_dir = "migrations"
+
+# R2 credentials — `.dev.vars` (local) hoặc Wrangler secrets (production):
+#   npx wrangler secret put R2_ACCESS_KEY_ID
+#   npx wrangler secret put R2_SECRET_ACCESS_KEY
+#   npx wrangler secret put R2_BUCKET_NAME
+#   npx wrangler secret put R2_PUBLIC_URL
+#   npx wrangler secret put R2_ENDPOINT
+# Xem `.env.example` và DEPLOY.md
+
+# Optional — email liên hệ (Resend)
+# EMAIL_API_KEY=
+# EMAIL_FROM=noreply@yourdomain.com

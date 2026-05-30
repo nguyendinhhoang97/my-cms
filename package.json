@@ -1,0 +1,51 @@
+{
+  "name": "my-cms",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "migrate": "tsx scripts/migrate.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
+    "db:setup": "tsx scripts/setup-db.ts",
+    "db:seed-admin": "tsx scripts/seed-admin.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^13.6.0",
+    "@aws-sdk/client-s3": "^3.1057.0",
+    "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@cloudflare/workers-types": "^4.20260530.1",
+    "@libsql/client": "^0.17.3",
+    "@tailwindcss/vite": "^4.3.0",
+    "astro": "^6.4.2",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.10.0",
+    "cookie": "^1.1.1",
+    "drizzle-orm": "^0.45.2",
+    "easymde": "^2.21.0",
+    "express-session": "^1.19.0",
+    "markdown-it": "^14.2.0",
+    "markdown-it-prism": "^3.0.1",
+    "marked": "^18.0.4",
+    "prismjs": "^1.30.0",
+    "tailwindcss": "^4.3.0",
+    "uuid": "^14.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/markdown-it": "^14.1.2",
+    "@types/marked": "^5.0.2",
+    "@types/uuid": "^10.0.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.22.3",
+    "wrangler": "^4.95.0"
+  }
+}

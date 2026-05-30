@@ -1,0 +1,104 @@
+---
+/**
+ * Trang đăng ký — form POST /api/auth/register + CSRF.
+ */
+import AuthLayout from '../layouts/AuthLayout.astro';
+
+export const prerender = false;
+
+const csrfToken = Astro.locals.csrfToken;
+
+if (Astro.locals.user) {
+	return Astro.redirect('/');
+}
+---
+
+<AuthLayout title="Đăng ký" subtitle="Tạo tài khoản tác giả mới">
+	<form method="post" action="/api/auth/register" class="space-y-5" id="register-form">
+		<input type="hidden" name="csrf_token" value={csrfToken} />
+
+		<div>
+			<label for="username" class="mb-1.5 block text-sm font-medium text-slate-300">
+				Username
+			</label>
+			<input
+				id="username"
+				name="username"
+				type="text"
+				autocomplete="username"
+				required
+				minlength="3"
+				maxlength="32"
+				pattern="[a-z0-9_]{3,32}"
+				title="Chữ thường, số và gạch dưới, 3–32 ký tự"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+				placeholder="ten_dang_nhap"
+			/>
+		</div>
+
+		<div>
+			<label for="email" class="mb-1.5 block text-sm font-medium text-slate-300">
+				Email
+			</label>
+			<input
+				id="email"
+				name="email"
+				type="email"
+				autocomplete="email"
+				required
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+				placeholder="you@example.com"
+			/>
+		</div>
+
+		<div>
+			<label for="password" class="mb-1.5 block text-sm font-medium text-slate-300">
+				Mật khẩu
+			</label>
+			<input
+				id="password"
+				name="password"
+				type="password"
+				autocomplete="new-password"
+				required
+				minlength="8"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+				placeholder="Tối thiểu 8 ký tự"
+			/>
+		</div>
+
+		<div>
+			<label
+				for="password_confirm"
+				class="mb-1.5 block text-sm font-medium text-slate-300"
+			>
+				Xác nhận mật khẩu
+			</label>
+			<input
+				id="password_confirm"
+				name="password_confirm"
+				type="password"
+				autocomplete="new-password"
+				required
+				minlength="8"
+				class="w-full rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-2.5 text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30"
+			/>
+		</div>
+
+		<p id="register-error" class="hidden text-sm text-red-400" role="alert"></p>
+
+		<button
+			type="submit"
+			class="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+		>
+			Tạo tài khoản
+		</button>
+	</form>
+
+	<p class="mt-6 text-center text-sm text-slate-400">
+		Đã có tài khoản?
+		<a href="/login" class="font-medium text-indigo-400 hover:text-indigo-300">
+			Đăng nhập
+		</a>
+	</p>
+</AuthLayout>

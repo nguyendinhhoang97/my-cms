@@ -1,0 +1,173 @@
+---
+/**
+ * Bình luận công khai — danh sách approved + form gửi (guest, chờ duyệt).
+ */
+import type { CommentDTO } from '../lib/db/comments';
+import { escapeHtml } from '../lib/security';
+import { formatBlogDate } from '../lib/markdown';
+
+interface Props {
+	postId: number;
+	comments: CommentDTO[];
+	csrfToken: string;
+}
+
+const { postId, comments, csrfToken } = Astro.props;
+---
+
+<section id="comments" class="mt-12 border-t border-slate-200 pt-10 dark:border-slate-800">
+	<h2 class="text-xl font-bold">Bình luận ({comments.length})</h2>
+
+	{
+		comments.length > 0 ? (
+			<ul class="mt-6 space-y-6" aria-label="Danh sách bình luận">
+				{comments.map((c) => (
+					<li class="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+						<div class="mb-2 flex items-center gap-2 text-sm">
+							<span class="font-semibold">{escapeHtml(c.authorName)}</span>
+							<span class="opacity-50" aria-hidden="true">
+								·
+							</span>
+							<time datetime={c.createdAt} class="opacity-50">
+								{formatBlogDate(c.createdAt)}
+							</time>
+						</div>
+						<p class="text-sm leading-relaxed opacity-90">{escapeHtml(c.content)}</p>
+					</li>
+				))}
+			</ul>
+		) : (
+			<p class="mt-4 text-sm opacity-60">Chưa có bình luận. Hãy là người đầu tiên!</p>
+		)
+	}
+
+	<form
+		id="comment-form"
+		class="mt-8 space-y-4 rounded-xl border border-slate-200 p-5 dark:border-slate-800"
+		novalidate
+	>
+		<h3 class="font-semibold">Viết bình luận</h3>
+		<p class="text-xs opacity-50">Không cần đăng nhập — email bắt buộc, không hiển thị công khai.</p>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<div>
+				<label for="author_name" class="mb-1 block text-sm opacity-70">Tên *</label>
+				<input
+					id="author_name"
+					name="author_name"
+					type="text"
+					required
+					autocomplete="name"
+					maxlength="100"
+					class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+				/>
+			</div>
+			<div>
+				<label for="author_email" class="mb-1 block text-sm opacity-70">Email *</label>
+				<input
+					id="author_email"
+					name="author_email"
+					type="email"
+					required
+					autocomplete="email"
+					maxlength="255"
+					class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+				/>
+			</div>
+		</div>
+		<div>
+			<label for="comment_content" class="mb-1 block text-sm opacity-70">Nội dung *</label>
+			<textarea
+				id="comment_content"
+				name="content"
+				required
+				rows="4"
+				maxlength="2000"
+				class="w-full rounded-lg border border-slate-300 bg-transparent px-3 py-2 text-sm dark:border-slate-700"
+			></textarea>
+		</div>
+		<p id="comment-message" class="hidden text-sm" role="alert"></p>
+		<button
+			type="submit"
+			id="comment-submit"
+			data-loading-text="Đang gửi..."
+			class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+		>
+			Gửi bình luận
+		</button>
+		<p class="text-xs opacity-50">Bình luận sẽ hiển thị sau khi được duyệt (pending → approved).</p>
+	</form>
+</section>
+
+<script define:vars={{ csrfToken, postId }}>
+	const form = document.getElementById('comment-form');
+	const msg = document.getElementById('comment-message');
+	const btn = document.getElementById('comment-submit') as HTMLButtonElement | null;
+
+	form?.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		if (!btn || !form) return;
+
+		const fd = new FormData(form);
+		const authorName = String(fd.get('author_name') ?? '').trim();
+		const authorEmail = String(fd.get('author_email') ?? '').trim();
+		const content = String(fd.get('content') ?? '').trim();
+
+		if (!authorName || !authorEmail || !content) {
+			if (msg) {
+				msg.textContent = 'Vui lòng điền đầy đủ tên, email và nội dung.';
+				msg.className = 'text-sm text-red-500';
+				msg.classList.remove('hidden');
+			}
+			return;
+		}
+
+		btn.disabled = true;
+		const loadingText = btn.dataset.loadingText ?? 'Đang gửi...';
+		const originalText = btn.textContent;
+		btn.textContent = loadingText;
+		msg?.classList.add('hidden');
+
+		try {
+			const res = await fetch('/api/comments', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					'X-CSRF-Token': csrfToken,
+				},
+				credentials: 'same-origin',
+				body: JSON.stringify({
+					postId,
+					authorName,
+					authorEmail,
+					content,
+					csrf_token: csrfToken,
+				}),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				if (msg) {
+					msg.textContent = data.error ?? 'Gửi thất bại.';
+					msg.className = 'text-sm text-red-500';
+					msg.classList.remove('hidden');
+				}
+				return;
+			}
+			if (msg) {
+				msg.textContent = data.data?.message ?? 'Cảm ơn! Bình luận đang chờ duyệt.';
+				msg.className = 'text-sm text-emerald-600 dark:text-emerald-400';
+				msg.classList.remove('hidden');
+			}
+			form.reset();
+		} catch {
+			if (msg) {
+				msg.textContent = 'Lỗi kết nối.';
+				msg.className = 'text-sm text-red-500';
+				msg.classList.remove('hidden');
+			}
+		} finally {
+			btn.disabled = false;
+			btn.textContent = originalText ?? 'Gửi bình luận';
+		}
+	});
+</script>

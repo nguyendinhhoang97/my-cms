@@ -1,0 +1,248 @@
+---
+/**
+ * Danh sách bài viết — bảng, phân trang, lọc status.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getAllPosts } from '../../../lib/db/posts';
+import { getDb } from '../../../lib/db';
+import { escapeHtml } from '../../../lib/security';
+import type { PostStatus } from '../../../../db/schema';
+
+export const prerender = false;
+
+const db = getDb();
+
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+const limit = 10;
+const statusParam = Astro.url.searchParams.get('status');
+const statusFilter =
+	statusParam === 'draft' || statusParam === 'published' || statusParam === 'archived'
+		? (statusParam as PostStatus)
+		: undefined;
+
+const result = await getAllPosts(db, page, limit, statusFilter);
+const { items, pagination } = result;
+
+function formatDate(iso: string | null): string {
+	if (!iso) return '—';
+	try {
+		return new Date(iso).toLocaleDateString('vi-VN', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+		});
+	} catch {
+		return '—';
+	}
+}
+
+function statusLabel(status: PostStatus): string {
+	const map: Record<PostStatus, string> = {
+		draft: 'Draft',
+		published: 'Published',
+		archived: 'Archived',
+	};
+	return map[status];
+}
+
+function statusClass(status: PostStatus): string {
+	const map: Record<PostStatus, string> = {
+		draft: 'bg-amber-500/15 text-amber-300 ring-amber-500/30',
+		published: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
+		archived: 'bg-slate-500/15 text-slate-400 ring-slate-500/30',
+	};
+	return map[status];
+}
+
+function pageUrl(p: number, status?: PostStatus): string {
+	const params = new URLSearchParams();
+	if (p > 1) params.set('page', String(p));
+	if (status) params.set('status', status);
+	const q = params.toString();
+	return q ? `/admin/posts?${q}` : '/admin/posts';
+}
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Bài viết" description="Quản lý nội dung blog">
+		<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+			<div class="flex flex-wrap gap-2">
+				<a
+					href="/admin/posts"
+					class:list={[
+						'rounded-lg px-3 py-1.5 text-sm font-medium transition',
+						!statusFilter
+							? 'bg-indigo-600 text-white'
+							: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+					]}
+				>
+					Tất cả
+				</a>
+				<a
+					href="/admin/posts?status=draft"
+					class:list={[
+						'rounded-lg px-3 py-1.5 text-sm font-medium transition',
+						statusFilter === 'draft'
+							? 'bg-amber-600/80 text-white'
+							: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+					]}
+				>
+					Draft
+				</a>
+				<a
+					href="/admin/posts?status=published"
+					class:list={[
+						'rounded-lg px-3 py-1.5 text-sm font-medium transition',
+						statusFilter === 'published'
+							? 'bg-emerald-600/80 text-white'
+							: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+					]}
+				>
+					Published
+				</a>
+			</div>
+			<a
+				href="/admin/posts/create"
+				class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500"
+			>
+				<span aria-hidden="true">+</span> Add New
+			</a>
+		</div>
+
+		<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+			<div class="overflow-x-auto">
+				<table class="w-full min-w-[640px] text-left text-sm">
+					<thead>
+						<tr class="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+							<th class="px-4 py-3 font-medium">Title</th>
+							<th class="px-4 py-3 font-medium">Status</th>
+							<th class="px-4 py-3 font-medium">Published</th>
+							<th class="px-4 py-3 font-medium text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{
+							items.length === 0 ? (
+								<tr>
+									<td colspan="4" class="px-4 py-12 text-center text-slate-500">
+										Chưa có bài viết nào.
+									</td>
+								</tr>
+							) : (
+								items.map((post) => (
+									<tr class="border-b border-slate-800/80 hover:bg-slate-800/30">
+										<td class="px-4 py-3">
+											<span class="font-medium text-slate-100">
+												{escapeHtml(post.title)}
+											</span>
+											<span class="mt-0.5 block font-mono text-xs text-slate-500">
+												/{escapeHtml(post.slug)}
+											</span>
+										</td>
+										<td class="px-4 py-3">
+											<span
+												class:list={[
+													'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset',
+													statusClass(post.status),
+												]}
+											>
+												{statusLabel(post.status)}
+											</span>
+										</td>
+										<td class="px-4 py-3 text-slate-400">
+											{formatDate(post.publishedAt)}
+										</td>
+										<td class="px-4 py-3 text-right">
+											<div class="flex justify-end gap-2">
+												<a
+													href={`/admin/posts/edit/${post.id}`}
+													class="rounded-md border border-slate-600 px-2.5 py-1 text-xs text-slate-300 transition hover:bg-slate-700"
+												>
+													Edit
+												</a>
+												<button
+													type="button"
+													class="delete-post-btn rounded-md border border-red-900/50 px-2.5 py-1 text-xs text-red-400 transition hover:bg-red-950/50"
+													data-id={post.id}
+													data-title={post.title}
+												>
+													Delete
+												</button>
+											</div>
+										</td>
+									</tr>
+								))
+							)
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		{
+			pagination.totalPages > 1 && (
+				<nav
+					class="mt-6 flex items-center justify-between gap-4 text-sm text-slate-400"
+					aria-label="Phân trang"
+				>
+					<p>
+						Trang {pagination.page} / {pagination.totalPages} ({pagination.total} bài)
+					</p>
+					<div class="flex gap-2">
+						{pagination.page > 1 && (
+							<a
+								href={pageUrl(pagination.page - 1, statusFilter)}
+								class="rounded-lg border border-slate-700 px-3 py-1.5 transition hover:bg-slate-800"
+							>
+								← Trước
+							</a>
+						)}
+						{pagination.page < pagination.totalPages && (
+							<a
+								href={pageUrl(pagination.page + 1, statusFilter)}
+								class="rounded-lg border border-slate-700 px-3 py-1.5 transition hover:bg-slate-800"
+							>
+								Sau →
+							</a>
+						)}
+					</div>
+				</nav>
+			)
+		}
+	</AdminLayout>
+</AuthGuard>
+
+<script>
+	import { adminFetch, parseApiResponse } from '../../../lib/client/admin-api';
+
+	document.querySelectorAll('.delete-post-btn').forEach((btn) => {
+		btn.addEventListener('click', async () => {
+			const el = btn as HTMLButtonElement;
+			const id = el.getAttribute('data-id');
+			const title = el.getAttribute('data-title') ?? '';
+			if (!id) return;
+
+			if (!window.confirm(`Xóa bài "${title}"?\nHành động này không thể hoàn tác.`)) return;
+
+			el.disabled = true;
+
+			try {
+				const res = await adminFetch(`/api/posts/${id}`, {
+					method: 'DELETE',
+					json: { confirm: true },
+				});
+				const result = await parseApiResponse(res);
+				if (!result.ok) {
+					alert(result.error ?? 'Xóa thất bại.');
+					el.disabled = false;
+					return;
+				}
+				window.location.reload();
+			} catch {
+				alert('Lỗi kết nối.');
+				el.disabled = false;
+			}
+		});
+	});
+</script>

@@ -1,0 +1,144 @@
+---
+/**
+ * Trang liên hệ — form name, email, message.
+ */
+import BlogLayout from '../layouts/BlogLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import JsonLd from '../components/JsonLd.astro';
+import { getDb } from '../lib/db';
+import { getSiteSettings } from '../lib/db/settings';
+import { absoluteUrl } from '../lib/seo/config';
+
+const origin = Astro.url.origin;
+const db = getDb();
+const siteSettings = await getSiteSettings(db);
+const csrfToken = Astro.locals.csrfToken;
+const pageUrl = absoluteUrl(origin, '/contact');
+const breadcrumbItems = [{ label: 'Home', href: '/' }, { label: 'Liên hệ' }];
+---
+
+<BlogLayout
+	title="Liên hệ"
+	description={`Liên hệ với ${siteSettings.siteTitle}`}
+	url={pageUrl}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+
+	<div class="mx-auto max-w-xl">
+		<h1 class="text-3xl font-bold">Liên hệ</h1>
+		<p class="mt-2 opacity-70">Gửi tin nhắn cho chúng tôi — phản hồi trong 1–2 ngày làm việc.</p>
+
+		<form id="contact-form" class="mt-8 space-y-4" novalidate>
+			<div>
+				<label for="contact_name" class="mb-1 block text-sm font-medium opacity-80">Họ tên *</label>
+				<input
+					id="contact_name"
+					name="name"
+					type="text"
+					required
+					minlength="1"
+					maxlength="100"
+					autocomplete="name"
+					class="w-full rounded-lg border border-slate-300 bg-transparent px-4 py-2.5 text-sm dark:border-slate-700"
+				/>
+			</div>
+			<div>
+				<label for="contact_email" class="mb-1 block text-sm font-medium opacity-80">Email *</label>
+				<input
+					id="contact_email"
+					name="email"
+					type="email"
+					required
+					maxlength="255"
+					autocomplete="email"
+					class="w-full rounded-lg border border-slate-300 bg-transparent px-4 py-2.5 text-sm dark:border-slate-700"
+				/>
+			</div>
+			<div>
+				<label for="contact_message" class="mb-1 block text-sm font-medium opacity-80">
+					Nội dung *
+				</label>
+				<textarea
+					id="contact_message"
+					name="message"
+					required
+					minlength="10"
+					maxlength="5000"
+					rows="6"
+					class="w-full rounded-lg border border-slate-300 bg-transparent px-4 py-2.5 text-sm dark:border-slate-700"
+				></textarea>
+				<p class="mt-1 text-xs opacity-50">Tối thiểu 10 ký tự.</p>
+			</div>
+			<p id="contact-message" class="hidden text-sm" role="alert"></p>
+			<button
+				type="submit"
+				id="contact-submit"
+				class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+			>
+				Gửi tin nhắn
+			</button>
+		</form>
+	</div>
+</BlogLayout>
+
+<script define:vars={{ csrfToken }}>
+	const form = document.getElementById('contact-form');
+	const msg = document.getElementById('contact-message');
+	const btn = document.getElementById('contact-submit') as HTMLButtonElement | null;
+
+	form?.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		if (!form || !btn) return;
+
+		const fd = new FormData(form);
+		const payload = {
+			name: String(fd.get('name') ?? '').trim(),
+			email: String(fd.get('email') ?? '').trim(),
+			message: String(fd.get('message') ?? '').trim(),
+			csrf_token: csrfToken,
+		};
+
+		if (payload.message.length < 10) {
+			if (msg) {
+				msg.textContent = 'Nội dung phải có ít nhất 10 ký tự.';
+				msg.className = 'text-sm text-red-500';
+				msg.classList.remove('hidden');
+			}
+			return;
+		}
+
+		btn.disabled = true;
+		msg?.classList.add('hidden');
+
+		try {
+			const res = await fetch('/api/contact', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					'X-CSRF-Token': csrfToken,
+				},
+				credentials: 'same-origin',
+				body: JSON.stringify(payload),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (msg) {
+				msg.textContent = data.data?.message ?? data.error ?? 'Lỗi gửi form.';
+				msg.className = res.ok
+					? 'text-sm text-emerald-600 dark:text-emerald-400'
+					: 'text-sm text-red-500';
+				msg.classList.remove('hidden');
+			}
+			if (res.ok) form.reset();
+		} catch {
+			if (msg) {
+				msg.textContent = 'Lỗi kết nối.';
+				msg.className = 'text-sm text-red-500';
+				msg.classList.remove('hidden');
+			}
+		} finally {
+			btn.disabled = false;
+		}
+	});
+</script>

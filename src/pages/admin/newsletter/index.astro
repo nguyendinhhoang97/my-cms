@@ -1,0 +1,105 @@
+---
+/**
+ * Quản lý newsletter — danh sách, export CSV, xóa.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+import { listNewsletterSubscribers } from '../../../lib/db/newsletter';
+import { escapeHtml } from '../../../lib/security';
+
+export const prerender = false;
+
+const db = getDb();
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+const { items, pagination } = await listNewsletterSubscribers(db, page, 20);
+
+function formatDate(iso: string): string {
+	try {
+		return new Date(iso).toLocaleString('vi-VN');
+	} catch {
+		return '—';
+	}
+}
+
+function pageUrl(p: number): string {
+	return p > 1 ? `/admin/newsletter?page=${p}` : '/admin/newsletter';
+}
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Newsletter" description={`${pagination.total} email đăng ký`}>
+		<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+			<p class="text-sm text-slate-400">Tổng: {pagination.total} subscribers</p>
+			<a
+				href="/api/newsletter/export"
+				class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+			>
+				Export CSV
+			</a>
+		</div>
+
+		<div class="overflow-x-auto rounded-xl border border-slate-800">
+			<table class="w-full min-w-[480px] text-left text-sm">
+				<thead class="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+					<tr>
+						<th class="px-4 py-3 font-medium">Email</th>
+						<th class="px-4 py-3 font-medium">Đăng ký lúc</th>
+						<th class="px-4 py-3 font-medium">Thao tác</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-slate-800">
+					{
+						items.map((s) => (
+							<tr data-subscriber-id={s.id} class="bg-slate-900/40">
+								<td class="px-4 py-3 font-mono text-slate-200">{escapeHtml(s.email)}</td>
+								<td class="px-4 py-3 text-slate-500">{formatDate(s.subscribedAt)}</td>
+								<td class="px-4 py-3">
+									<button
+										type="button"
+										data-delete-subscriber={s.id}
+										class="rounded-lg bg-red-600/20 px-2.5 py-1 text-xs font-medium text-red-300 hover:bg-red-600/30"
+									>
+										Xóa
+									</button>
+								</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+			{
+				items.length === 0 && (
+					<p class="px-4 py-12 text-center text-slate-500">Chưa có email đăng ký.</p>
+				)
+			}
+		</div>
+
+		{
+			pagination.totalPages > 1 && (
+				<nav class="mt-6 flex justify-center gap-2">
+					{
+						Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+							<a
+								href={pageUrl(p)}
+								class:list={[
+									'rounded-lg px-3 py-1.5 text-sm',
+									p === pagination.page
+										? 'bg-indigo-600 text-white'
+										: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+								]}
+							>
+								{p}
+							</a>
+						))
+					}
+				</nav>
+			)
+		}
+
+		<script>
+			import { initNewsletterAdmin } from '../../../scripts/newsletter-admin';
+			initNewsletterAdmin();
+		</script>
+	</AdminLayout>
+</AuthGuard>

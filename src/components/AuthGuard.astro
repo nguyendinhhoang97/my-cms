@@ -1,0 +1,37 @@
+---
+/**
+ * @component AuthGuard
+ * Bảo vệ nội dung admin (hoặc route cần đăng nhập).
+ *
+ * Middleware đã chặn /admin — component này dùng khi cần guard lồng nhau
+ * hoặc kiểm tra role cụ thể trong trang Astro.
+ *
+ * XSS: không render HTML thô từ user; chỉ dùng text đã escape qua Astro `{}`.
+ */
+import type { UserRole } from '../../db/schema';
+
+interface Props {
+	/** Role tối thiểu; mặc định admin */
+	role?: UserRole;
+}
+
+const { role = 'admin' } = Astro.props;
+const user = Astro.locals.user;
+
+if (!user) {
+	return Astro.redirect(
+		`/login?redirect=${encodeURIComponent(Astro.url.pathname)}`,
+	);
+}
+
+const roleOrder: UserRole[] = ['author', 'editor', 'admin'];
+const userLevel = roleOrder.indexOf(user.role);
+const requiredLevel = roleOrder.indexOf(role);
+
+if (userLevel < requiredLevel) {
+	return Astro.redirect('/login?error=forbidden');
+}
+
+---
+
+<slot />

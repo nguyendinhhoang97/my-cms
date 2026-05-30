@@ -1,0 +1,31 @@
+---
+import BlogLayout from '../layouts/BlogLayout.astro';
+import Breadcrumb from '../components/Breadcrumb.astro';
+import JsonLd from '../components/JsonLd.astro';
+import { absoluteUrl } from '../lib/seo/config';
+
+const origin = Astro.url.origin;
+const pageUrl = absoluteUrl(origin, '/about');
+const breadcrumbItems = [{ label: 'Home', href: '/' }, { label: 'About' }];
+---
+
+<BlogLayout
+	title="About"
+	description="Giới thiệu về my-cms blog — Astro, Cloudflare D1, Tailwind CSS"
+	url={pageUrl}
+	keywords={['about', 'giới thiệu', 'my-cms']}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+	<article class="blog-prose max-w-2xl">
+		<h1>Về my-cms</h1>
+		<p>
+			Đây là blog được xây dựng bằng <strong>Astro</strong>, lưu trữ trên
+			<strong>Cloudflare D1</strong>, với giao diện Tailwind CSS và hỗ trợ dark mode.
+		</p>
+		<p>
+			Nội dung được quản trị qua khu vực admin — hỗ trợ Markdown, categories, tags và bình
+			luận.
+		</p>
+	</article>
+</BlogLayout>

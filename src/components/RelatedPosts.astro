@@ -1,0 +1,24 @@
+---
+/**
+ * Bài viết liên quan — tối đa 3 bài.
+ */
+import type { PostDTO } from '../lib/db/posts';
+import PostCard from './blog/PostCard.astro';
+
+interface Props {
+	posts: PostDTO[];
+}
+
+const { posts } = Astro.props;
+
+if (posts.length === 0) return null;
+---
+
+<section class="mt-16 border-t border-slate-200 pt-10 dark:border-slate-800">
+	<h2 class="mb-6 text-xl font-bold">Bài viết liên quan</h2>
+	<div class="space-y-6">
+		{posts.map((post) => (
+			<PostCard post={post} />
+		))}
+	</div>
+</section>

@@ -1,0 +1,27 @@
+---
+/**
+ * Google Analytics 4 — chỉ inject khi có ga_id.
+ */
+interface Props {
+	gaId: string;
+}
+
+const { gaId } = Astro.props;
+const id = gaId.trim();
+---
+
+{
+	id && (
+		<>
+			<script async src={`https://www.googletagmanager.com/gtag/js?id=${id}`}></script>
+			<script is:inline define:vars={{ id }}>
+				window.dataLayer = window.dataLayer || [];
+				function gtag() {
+					dataLayer.push(arguments);
+				}
+				gtag('js', new Date());
+				gtag('config', id);
+			</script>
+		</>
+	)
+}

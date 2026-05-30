@@ -1,0 +1,147 @@
+---
+/**
+ * Backup database — export JSON, lịch sử R2.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+export const prerender = false;
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Backup Database" description="Export dữ liệu D1 ra JSON">
+		<div class="mx-auto max-w-2xl space-y-8">
+			<section class="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+				<h2 class="text-lg font-semibold text-white">Export Database</h2>
+				<p class="mt-2 text-sm text-slate-400">
+					Tải xuống toàn bộ dữ liệu D1 (users, posts, comments, settings, …) dưới dạng
+					JSON.
+				</p>
+				<div class="mt-6 flex flex-wrap gap-3">
+					<a
+						id="export-btn"
+						href="/api/admin/backup"
+						class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500"
+					>
+						Export Database
+					</a>
+					<button
+						type="button"
+						id="export-store-btn"
+						class="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800"
+					>
+						Export &amp; lưu R2
+					</button>
+				</div>
+				<p id="export-status" class="mt-4 hidden text-sm" role="status"></p>
+			</section>
+
+			<section class="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+				<div class="flex items-center justify-between gap-4">
+					<h2 class="text-lg font-semibold text-white">Lịch sử backup (R2)</h2>
+					<button
+						type="button"
+						id="refresh-history"
+						class="text-sm text-indigo-400 hover:underline"
+					>
+						Làm mới
+					</button>
+				</div>
+				<p id="r2-notice" class="mt-2 hidden text-sm text-amber-400/90"></p>
+				<div id="history-wrap" class="mt-4 overflow-x-auto">
+					<table class="hidden w-full min-w-[480px] text-left text-sm" id="history-table">
+						<thead class="border-b border-slate-800 text-slate-400">
+							<tr>
+								<th class="py-2 pr-4 font-medium">File</th>
+								<th class="py-2 pr-4 font-medium">Kích thước</th>
+								<th class="py-2 font-medium">Thời gian</th>
+							</tr>
+						</thead>
+						<tbody id="history-body" class="divide-y divide-slate-800 text-slate-300"></tbody>
+					</table>
+					<p id="history-empty" class="text-sm text-slate-500">Đang tải...</p>
+				</div>
+			</section>
+		</div>
+
+		<script>
+			function formatSize(bytes: number): string {
+				if (bytes < 1024) return `${bytes} B`;
+				if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+				return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+			}
+
+			function formatDate(iso: string): string {
+				try {
+					return new Date(iso).toLocaleString('vi-VN');
+				} catch {
+					return iso;
+				}
+			}
+
+			async function loadHistory(): Promise<void> {
+				const empty = document.getElementById('history-empty');
+				const table = document.getElementById('history-table');
+				const tbody = document.getElementById('history-body');
+				const notice = document.getElementById('r2-notice');
+				if (!empty || !table || !tbody) return;
+
+				empty.textContent = 'Đang tải...';
+				empty.classList.remove('hidden');
+				table.classList.add('hidden');
+				tbody.innerHTML = '';
+
+				const res = await fetch('/api/admin/backup/history', {
+					credentials: 'same-origin',
+					headers: { Accept: 'application/json' },
+				});
+				const json = await res.json().catch(() => ({}));
+
+				if (!json.data?.configured) {
+					notice?.classList.remove('hidden');
+					if (notice) {
+						notice.textContent =
+							'R2 chưa cấu hình — lịch sử backup chỉ khả dụng khi đã set R2_* env vars.';
+					}
+					empty.textContent = 'Không có lịch sử backup.';
+					return;
+				}
+
+				notice?.classList.add('hidden');
+				const items = json.data.items ?? [];
+				if (items.length === 0) {
+					empty.textContent = 'Chưa có backup nào trên R2. Dùng "Export & lưu R2".';
+					return;
+				}
+
+				empty.classList.add('hidden');
+				table.classList.remove('hidden');
+				for (const item of items) {
+					const tr = document.createElement('tr');
+					tr.innerHTML = `
+						<td class="py-2 pr-4 font-mono text-xs">${item.filename}</td>
+						<td class="py-2 pr-4">${formatSize(item.size)}</td>
+						<td class="py-2">${formatDate(item.lastModified)}</td>`;
+					tbody.appendChild(tr);
+				}
+			}
+
+			document.getElementById('export-store-btn')?.addEventListener('click', () => {
+				const status = document.getElementById('export-status');
+				if (status) {
+					status.textContent = 'Đang export và lưu lên R2...';
+					status.className = 'mt-4 text-sm text-indigo-300';
+					status.classList.remove('hidden');
+				}
+				window.location.href = '/api/admin/backup?store=1';
+				setTimeout(() => void loadHistory(), 2000);
+			});
+
+			document.getElementById('refresh-history')?.addEventListener('click', () => {
+				void loadHistory();
+			});
+
+			void loadHistory();
+		</script>
+	</AdminLayout>
+</AuthGuard>

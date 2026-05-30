@@ -1,0 +1,40 @@
+---
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import Breadcrumb from '../../components/Breadcrumb.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import { getAllTags } from '../../lib/db/tags';
+import { getDb } from '../../lib/db';
+import { absoluteUrl } from '../../lib/seo/config';
+import { escapeHtml } from '../../lib/security';
+
+export const prerender = false;
+
+const origin = Astro.url.origin;
+const db = getDb();
+const tags = await getAllTags(db);
+const pageUrl = absoluteUrl(origin, '/tags');
+const breadcrumbItems = [{ label: 'Home', href: '/' }, { label: 'Tags' }];
+---
+
+<BlogLayout
+	title="Tags"
+	description="Tất cả thẻ bài viết trên my-cms blog"
+	url={pageUrl}
+	keywords={['tags', 'thẻ', ...tags.map((t) => t.name)]}
+>
+	<JsonLd slot="jsonld" kind="breadcrumbList" origin={origin} items={breadcrumbItems} />
+	<Breadcrumb items={breadcrumbItems} />
+	<h1 class="mb-8 text-3xl font-bold">Tags</h1>
+	<div class="flex flex-wrap gap-2">
+		{
+			tags.map((tag) => (
+				<a
+					href={`/tags/${tag.slug}`}
+					class="rounded-full border border-slate-200 px-4 py-2 text-sm transition hover:border-indigo-500 hover:text-indigo-500 dark:border-slate-700"
+				>
+					#{escapeHtml(tag.name)}
+				</a>
+			))
+		}
+	</div>
+</BlogLayout>

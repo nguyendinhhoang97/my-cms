@@ -1,0 +1,64 @@
+---
+/**
+ * Media library — gallery, upload, xóa nhiều, copy link.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import ImageUploader from '../../../components/admin/ImageUploader.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+const user = Astro.locals.user!;
+const canDelete = user.role === 'admin' || user.role === 'editor';
+---
+
+<AuthGuard role="author">
+	<AdminLayout title="Media Library" description="Quản lý ảnh trên Cloudflare R2">
+		<div class="space-y-8">
+			<section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4 lg:p-6">
+				<h2 class="mb-4 text-lg font-semibold text-white">Upload ảnh mới</h2>
+				<ImageUploader />
+			</section>
+
+			<section>
+				<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+					<h2 class="text-lg font-semibold text-white">Thư viện ảnh</h2>
+					<div class="flex gap-2">
+						<button
+							type="button"
+							id="refresh-media"
+							class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+						>
+							Làm mới
+						</button>
+						{
+							canDelete && (
+								<div id="bulk-actions" class="hidden flex items-center gap-2">
+									<span class="text-sm text-slate-400">
+										Đã chọn: <span id="selected-count">0</span>
+									</span>
+									<button
+										type="button"
+										id="bulk-delete"
+										class="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/20"
+									>
+										Xóa đã chọn
+									</button>
+								</div>
+							)
+						}
+					</div>
+				</div>
+				<p id="media-status" class="mb-4 text-sm text-slate-500">Đang tải...</p>
+				<div
+					id="media-grid"
+					class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+				>
+				</div>
+			</section>
+		</div>
+
+		<script define:vars={{ canDelete }}>
+			import { initMediaLibrary } from '../../../scripts/media-library';
+			initMediaLibrary(canDelete);
+		</script>
+	</AdminLayout>
+</AuthGuard>

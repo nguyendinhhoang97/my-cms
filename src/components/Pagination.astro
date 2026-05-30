@@ -1,0 +1,56 @@
+---
+/**
+ * Phân trang dùng chung cho blog.
+ */
+interface Props {
+	page: number;
+	totalPages: number;
+	/** URL cơ sở, ví dụ / hoặc /categories/tech — không gồm ?page= */
+	baseUrl: string;
+	/** Query params giữ lại (q, status, …) */
+	queryParams?: Record<string, string>;
+}
+
+const { page, totalPages, baseUrl, queryParams = {} } = Astro.props;
+
+if (totalPages <= 1) {
+	return null;
+}
+
+function pageHref(p: number): string {
+	const params = new URLSearchParams(queryParams);
+	if (p > 1) params.set('page', String(p));
+	else params.delete('page');
+	const q = params.toString();
+	const base = baseUrl.replace(/\?$/, '');
+	return q ? `${base}?${q}` : base;
+}
+---
+
+<nav class="mt-10 flex flex-wrap items-center justify-between gap-4" aria-label="Phân trang">
+	<p class="text-sm opacity-70">
+		Trang {page} / {totalPages}
+	</p>
+	<div class="flex gap-2">
+		{
+			page > 1 && (
+				<a
+					href={pageHref(page - 1)}
+					class="rounded-lg border border-slate-300 px-4 py-2 text-sm transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+				>
+					← Trước
+				</a>
+			)
+		}
+		{
+			page < totalPages && (
+				<a
+					href={pageHref(page + 1)}
+					class="rounded-lg border border-slate-300 px-4 py-2 text-sm transition hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+				>
+					Sau →
+				</a>
+			)
+		}
+	</div>
+</nav>

@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+/**
+ * Admin CMS — sidebar, EasyMDE dark, live preview prose
+ */
+
+/* Sidebar mobile overlay */
+.admin-sidebar-backdrop {
+	@apply fixed inset-0 z-40 bg-black/60 opacity-0 pointer-events-none transition-opacity lg:hidden;
+}
+.admin-sidebar-backdrop.is-open {
+	@apply opacity-100 pointer-events-auto;
+}
+
+.admin-sidebar {
+	@apply fixed inset-y-0 left-0 z-50 flex w-64 -translate-x-full flex-col border-r border-slate-800 bg-slate-900 transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0;
+}
+.admin-sidebar.is-open {
+	@apply translate-x-0;
+}
+
+/* EasyMDE dark */
+.post-form-root .EasyMDEContainer .CodeMirror {
+	background: rgb(30 41 59 / 0.6);
+	color: #e2e8f0;
+	border-color: rgb(51 65 85);
+	min-height: 280px;
+}
+.post-form-root .EasyMDEContainer .editor-toolbar {
+	background: rgb(15 23 42 / 0.8);
+	border-color: rgb(51 65 85);
+}
+.post-form-root .EasyMDEContainer .editor-toolbar button {
+	color: #94a3b8 !important;
+	border-color: transparent;
+}
+.post-form-root .EasyMDEContainer .editor-toolbar button:hover,
+.post-form-root .EasyMDEContainer .editor-toolbar button.active {
+	background: rgb(51 65 85);
+	border-color: rgb(71 85 105);
+}
+.post-form-root .EasyMDEContainer .editor-preview,
+.post-form-root .editor-preview-side {
+	background: rgb(15 23 42);
+	color: #e2e8f0;
+}
+
+/* Live preview panel */
+.markdown-preview {
+	color: #e2e8f0;
+	line-height: 1.65;
+}
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+	color: #c7d2fe;
+	font-weight: 700;
+	margin-top: 1em;
+	margin-bottom: 0.5em;
+}
+.markdown-preview h1 { font-size: 1.5rem; }
+.markdown-preview h2 { font-size: 1.25rem; }
+.markdown-preview a { color: #818cf8; text-decoration: underline; }
+.markdown-preview code {
+	background: rgb(15 23 42);
+	padding: 0.125rem 0.375rem;
+	border-radius: 0.25rem;
+	font-size: 0.875em;
+	color: #fcd34d;
+}
+.markdown-preview pre {
+	background: rgb(15 23 42);
+	padding: 1rem;
+	border-radius: 0.5rem;
+	overflow-x: auto;
+}
+.markdown-preview pre code {
+	background: transparent;
+	padding: 0;
+	color: inherit;
+}
+.markdown-preview ul,
+.markdown-preview ol {
+	padding-left: 1.5rem;
+	margin: 0.5em 0;
+}
+.markdown-preview blockquote {
+	border-left: 3px solid #6366f1;
+	padding-left: 1rem;
+	color: #94a3b8;
+}
+.markdown-preview img {
+	max-width: 100%;
+	border-radius: 0.5rem;
+}
+
+/* Loading spinner on buttons */
+.btn-loading {
+	@apply relative pointer-events-none opacity-70;
+}
+.btn-loading::after {
+	content: '';
+	@apply absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-white/30 border-t-white;
+}

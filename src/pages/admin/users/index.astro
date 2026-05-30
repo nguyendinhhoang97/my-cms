@@ -1,0 +1,260 @@
+---
+// src/pages/admin/users/index.astro
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+import { users } from '../../../../db/schema';
+
+const db = getDb();
+const allUsers = await db.select().from(users);
+---
+
+<AdminLayout title="Quản lý người dùng">
+  <div class="p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Quản lý người dùng</h1>
+      <button id="addUserBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        + Thêm người dùng
+      </button>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tên đăng nhập</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vai trò</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ngày tạo</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          {allUsers.map(user => (
+            <tr key={user.id}>
+              <td class="px-6 py-4 text-sm text-gray-900">{user.id}</td>
+              <td class="px-6 py-4 text-sm text-gray-900">{user.username}</td>
+              <td class="px-6 py-4 text-sm text-gray-900">{user.email}</td>
+              <td class="px-6 py-4 text-sm">
+                <span class={`px-2 py-1 rounded-full text-xs ${
+                  user.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                }`}>
+                  {user.role === 'admin' ? 'Quản trị viên' : 'Biên tập viên'}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-sm text-gray-900">
+                {user.created_at ? new Date(user.created_at).toLocaleDateString('vi-VN') : 'Chưa có'}
+              </td>
+              <td class="px-6 py-4 text-sm space-x-2">
+                <button 
+  class="edit-btn text-blue-600 hover:text-blue-800" 
+  data-id={user.id} 
+  data-username={user.username}
+  data-email={user.email}
+  data-role={user.role}>
+  Sửa
+</button>
+                {user.id !== 1 && (
+                  <button class="delete-btn text-red-600 hover:text-red-800" data-id={user.id}>
+                    Xóa
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  
+  <!-- Modal -->
+  <div id="userModal" class="fixed inset-0 bg-black bg-opacity-70 hidden flex items-center justify-center z-50">
+    <div class="bg-slate-800 rounded-lg p-6 w-96 border border-slate-700">
+      <h2 id="modalTitle" class="text-xl font-bold mb-4 text-white">Thêm người dùng</h2>
+      <form id="userForm">
+        <input type="hidden" id="userId" />
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1 text-slate-300">Tên đăng nhập</label>
+          <input type="text" id="username" class="w-full border border-slate-600 rounded-lg px-3 py-2 bg-slate-900 text-white focus:outline-none focus:border-blue-500" required />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1 text-slate-300">Email</label>
+          <input type="email" id="email" class="w-full border border-slate-600 rounded-lg px-3 py-2 bg-slate-900 text-white focus:outline-none focus:border-blue-500" required />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1 text-slate-300">Mật khẩu</label>
+          <input type="password" id="password" class="w-full border border-slate-600 rounded-lg px-3 py-2 bg-slate-900 text-white focus:outline-none focus:border-blue-500" />
+          <p class="text-xs text-slate-400 mt-1">Mật khẩu phải có ít nhất 6 ký tự</p>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1 text-slate-300">Vai trò</label>
+          <select id="role" class="w-full border border-slate-600 rounded-lg px-3 py-2 bg-slate-900 text-white focus:outline-none focus:border-blue-500">
+            <option value="editor">Biên tập viên</option>
+            <option value="admin">Quản trị viên</option>
+          </select>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="closeModalBtn" class="px-4 py-2 border border-slate-600 rounded-lg hover:bg-slate-700 text-slate-300 transition">Hủy</button>
+          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const modal = document.getElementById('userModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const usernameInput = document.getElementById('username');
+      const emailInput = document.getElementById('email');
+      const passwordInput = document.getElementById('password');
+      const roleSelect = document.getElementById('role');
+      const userForm = document.getElementById('userForm');
+      
+      let currentUserId = null;
+      
+      // Mở modal thêm user
+      const addBtn = document.getElementById('addUserBtn');
+      if (addBtn) {
+        addBtn.onclick = function() {
+          currentUserId = null;
+          modalTitle.innerText = 'Thêm người dùng';
+          usernameInput.value = '';
+          emailInput.value = '';
+          passwordInput.value = '';
+          roleSelect.value = 'editor';
+          modal.classList.remove('hidden');
+        };
+      }
+      
+      // Sửa user
+      const editBtns = document.querySelectorAll('.edit-btn');
+      for (let i = 0; i < editBtns.length; i++) {
+        editBtns[i].onclick = function() {
+          currentUserId = this.getAttribute('data-id');
+          modalTitle.innerText = 'Sửa người dùng';
+          usernameInput.value = this.getAttribute('data-username') || '';
+          emailInput.value = this.getAttribute('data-email') || '';
+          roleSelect.value = this.getAttribute('data-role');
+          passwordInput.value = '';
+          modal.classList.remove('hidden');
+        };
+      }
+      
+      // Xóa user
+      const deleteBtns = document.querySelectorAll('.delete-btn');
+      for (let i = 0; i < deleteBtns.length; i++) {
+        deleteBtns[i].onclick = async function() {
+          const id = this.getAttribute('data-id');
+          if (confirm('Bạn có chắc muốn xóa người dùng này?')) {
+            try {
+              const response = await fetch('/api/admin/users/' + id, { method: 'DELETE' });
+              const result = await response.json();
+              if (result.success) {
+                location.reload();
+              } else {
+                alert(result.error || 'Không thể xóa');
+              }
+            } catch (error) {
+              alert('Lỗi kết nối: ' + error.message);
+            }
+          }
+        };
+      }
+      
+      // Đóng modal
+      const closeBtn = document.getElementById('closeModalBtn');
+      if (closeBtn) {
+        closeBtn.onclick = function() {
+          modal.classList.add('hidden');
+        };
+      }
+      
+      // Đóng khi click ra ngoài
+      if (modal) {
+        modal.onclick = function(e) {
+          if (e.target === modal) {
+            modal.classList.add('hidden');
+          }
+        };
+      }
+      
+      // Submit form
+      if (userForm) {
+        userForm.onsubmit = async function(e) {
+          e.preventDefault();
+          
+          const formData = new FormData();
+          
+          if (!currentUserId) {
+            // THÊM MỚI USER
+            const username = usernameInput.value.trim();
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const role = roleSelect.value;
+            
+            // Kiểm tra dữ liệu nhập
+            if (!username) {
+              alert('Vui lòng nhập tên đăng nhập');
+              return;
+            }
+            if (!email) {
+              alert('Vui lòng nhập email');
+              return;
+            }
+            if (!password) {
+              alert('Vui lòng nhập mật khẩu');
+              return;
+            }
+            if (password.length < 6) {
+              alert('Mật khẩu phải có ít nhất 6 ký tự');
+              return;
+            }
+            
+            formData.append('username', username);
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('role', role);
+            
+            try {
+              const response = await fetch('/api/admin/users', { method: 'POST', body: formData });
+              const result = await response.json();
+              if (result.success) {
+                location.reload();
+              } else {
+                alert(result.error || 'Có lỗi xảy ra khi tạo user');
+              }
+            } catch (error) {
+              alert('Lỗi kết nối: ' + error.message);
+            }
+          } else {
+            // CẬP NHẬT USER
+            const password = passwordInput.value;
+            const role = roleSelect.value;
+            
+            formData.append('role', role);
+            if (password) {
+              if (password.length < 6) {
+                alert('Mật khẩu phải có ít nhất 6 ký tự');
+                return;
+              }
+              formData.append('password', password);
+            }
+            
+            try {
+              const response = await fetch('/api/admin/users/' + currentUserId, { method: 'PUT', body: formData });
+              const result = await response.json();
+              if (result.success) {
+                location.reload();
+              } else {
+                alert(result.error || 'Có lỗi xảy ra khi cập nhật user');
+              }
+            } catch (error) {
+              alert('Lỗi kết nối: ' + error.message);
+            }
+          }
+        };
+      }
+    });
+  </script>
+</AdminLayout>

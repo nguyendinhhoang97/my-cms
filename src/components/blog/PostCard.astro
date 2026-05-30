@@ -1,0 +1,67 @@
+---
+/**
+ * Card bài viết trên listing blog.
+ */
+import type { PostDTO } from '../../lib/db/posts';
+import { formatBlogDate } from '../../lib/markdown';
+import { readingTime } from '../../lib/utils/readingTime';
+import { escapeHtml } from '../../lib/security';
+
+interface Props {
+	post: PostDTO;
+}
+
+const { post } = Astro.props;
+const readTimeLabel = readingTime(post.content);
+const date = formatBlogDate(post.publishedAt);
+const excerpt = post.excerpt ?? post.content.slice(0, 160).replace(/[#*`]/g, '') + '…';
+---
+
+<article class="blog-card group flex flex-col sm:flex-row">
+	<a
+		href={`/posts/${post.slug}`}
+		class="relative block aspect-[16/10] shrink-0 overflow-hidden sm:w-72"
+	>
+		{
+			post.featuredImage ? (
+				<img
+					src={post.featuredImage}
+					alt=""
+					class="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+					loading="lazy"
+				/>
+			) : (
+				<div class="flex h-full min-h-[180px] items-center justify-center bg-gradient-to-br from-indigo-500/20 to-violet-500/10 text-4xl opacity-40">
+					✎
+				</div>
+			)
+		}
+	</a>
+	<div class="flex flex-1 flex-col p-5">
+		<div class="mb-2 flex flex-wrap gap-2 text-xs opacity-60">
+			{date && <time datetime={post.publishedAt ?? ''}>{date}</time>}
+			<span>·</span>
+			<span>{readTimeLabel}</span>
+		</div>
+		<h2 class="text-xl font-bold leading-snug">
+			<a href={`/posts/${post.slug}`} class="hover:text-indigo-500">
+				{escapeHtml(post.title)}
+			</a>
+		</h2>
+		<p class="mt-2 line-clamp-3 flex-1 text-sm opacity-75">{escapeHtml(excerpt)}</p>
+		{
+			post.categories.length > 0 && (
+				<div class="mt-4 flex flex-wrap gap-2">
+					{post.categories.slice(0, 2).map((cat) => (
+						<a
+							href={`/categories/${cat.slug}`}
+							class="rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs text-indigo-600 dark:text-indigo-300"
+						>
+							{escapeHtml(cat.name)}
+						</a>
+					))}
+				</div>
+			)
+		}
+	</div>
+</article>

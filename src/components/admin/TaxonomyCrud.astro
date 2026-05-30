@@ -1,0 +1,193 @@
+---
+/**
+ * CRUD categories hoặc tags — bảng + modal form.
+ */
+import { escapeHtml } from '../../lib/security';
+
+export interface TaxonomyRow {
+	id: number;
+	name: string;
+	slug: string;
+	description?: string | null;
+}
+
+interface Props {
+	type: 'categories' | 'tags';
+	items: TaxonomyRow[];
+}
+
+const { type, items } = Astro.props;
+const label = type === 'categories' ? 'Categories' : 'Tags';
+const singular = type === 'categories' ? 'category' : 'tag';
+---
+
+<div class="taxonomy-crud">
+	<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+		<p class="text-sm text-slate-400">{items.length} {label.toLowerCase()}</p>
+		<button
+			type="button"
+			id="btn-add"
+			class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-900/30 transition hover:bg-indigo-500"
+		>
+			<span aria-hidden="true">+</span> Thêm {singular}
+		</button>
+	</div>
+
+	<div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/40">
+		<div class="overflow-x-auto">
+			<table class="w-full min-w-[480px] text-left text-sm">
+				<thead>
+					<tr class="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+						<th class="px-4 py-3 font-medium">Name</th>
+						<th class="px-4 py-3 font-medium">Slug</th>
+						{
+							type === 'categories' && (
+								<th class="hidden px-4 py-3 font-medium md:table-cell">Mô tả</th>
+							)
+						}
+						<th class="px-4 py-3 text-right font-medium">Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+					{
+						items.length === 0 ? (
+							<tr>
+								<td
+									colspan={type === 'categories' ? 4 : 3}
+									class="px-4 py-12 text-center text-slate-500"
+								>
+									Chưa có dữ liệu. Nhấn &quot;Thêm {singular}&quot;.
+								</td>
+							</tr>
+						) : (
+							items.map((item) => (
+								<tr class="border-b border-slate-800/80 hover:bg-slate-800/30">
+									<td class="px-4 py-3 font-medium text-slate-100">
+										{escapeHtml(item.name)}
+									</td>
+									<td class="px-4 py-3 font-mono text-xs text-slate-500">
+										/{escapeHtml(item.slug)}
+									</td>
+									{
+										type === 'categories' && (
+											<td class="hidden max-w-xs truncate px-4 py-3 text-slate-400 md:table-cell">
+												{escapeHtml(item.description ?? '—')}
+											</td>
+										)
+									}
+									<td class="px-4 py-3 text-right">
+										<div class="flex justify-end gap-2">
+											<button
+												type="button"
+												class="btn-edit rounded-md border border-slate-600 px-2.5 py-1 text-xs text-slate-300 hover:bg-slate-700"
+												data-id={item.id}
+												data-name={item.name}
+												data-slug={item.slug}
+												data-description={item.description ?? ''}
+											>
+												Edit
+											</button>
+											<button
+												type="button"
+												class="btn-delete rounded-md border border-red-900/50 px-2.5 py-1 text-xs text-red-400 hover:bg-red-950/50"
+												data-id={item.id}
+												data-name={item.name}
+											>
+												Delete
+											</button>
+										</div>
+									</td>
+								</tr>
+							))
+						)
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+
+<!-- Modal -->
+<div
+	id="taxonomy-modal"
+	class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+	role="dialog"
+	aria-modal="true"
+>
+	<div
+		class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+	>
+		<div class="mb-4 flex items-center justify-between">
+			<h2 id="modal-title" class="text-lg font-semibold text-white">Thêm mới</h2>
+			<button
+				type="button"
+				id="modal-close"
+				class="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+				aria-label="Đóng"
+			>
+				×
+			</button>
+		</div>
+
+		<form id="taxonomy-form" class="space-y-4">
+			<input type="hidden" id="taxonomy-id" value="" />
+
+			<div>
+				<label for="taxonomy-name" class="mb-1 block text-sm text-slate-300">Name</label>
+				<input
+					id="taxonomy-name"
+					required
+					maxlength="200"
+					class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-indigo-500"
+				/>
+			</div>
+
+			<div>
+				<label for="taxonomy-slug" class="mb-1 block text-sm text-slate-300">Slug</label>
+				<input
+					id="taxonomy-slug"
+					maxlength="200"
+					class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 font-mono text-sm text-white outline-none focus:border-indigo-500"
+				/>
+			</div>
+
+			<div class:list={['field-description', type !== 'categories' && 'hidden']}>
+				<label for="taxonomy-description" class="mb-1 block text-sm text-slate-300">
+					Mô tả
+				</label>
+				<textarea
+					id="taxonomy-description"
+					rows="3"
+					maxlength="5000"
+					class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-white outline-none focus:border-indigo-500"
+				></textarea>
+			</div>
+
+			<div id="taxonomy-message" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert">
+			</div>
+
+			<div class="flex gap-3 pt-2">
+				<button
+					type="submit"
+					id="taxonomy-submit"
+					data-loading-text="Đang lưu..."
+					class="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+				>
+					Lưu
+				</button>
+				<button
+					type="button"
+					id="modal-cancel"
+					class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
+				>
+					Hủy
+				</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<script define:vars={{ type }}>
+	import { initTaxonomyCrud } from '../../scripts/taxonomy-crud';
+	initTaxonomyCrud(type);
+</script>

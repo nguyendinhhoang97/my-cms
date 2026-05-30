@@ -1,0 +1,122 @@
+---
+/**
+ * Cấu hình site — title, description, logo, GA, contact email.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getDb } from '../../../lib/db';
+import { getSiteSettings } from '../../../lib/db/settings';
+import { escapeHtml } from '../../../lib/security';
+
+export const prerender = false;
+
+const db = getDb();
+const settings = await getSiteSettings(db);
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Cài đặt" description="Cấu hình site-wide">
+		<form id="settings-form" class="mx-auto max-w-2xl space-y-6">
+			<div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+				<h2 class="text-sm font-semibold text-slate-200">Thông tin site</h2>
+				<div class="mt-4 space-y-4">
+					<div>
+						<label for="site_title" class="mb-1.5 block text-sm text-slate-400">
+							Site title
+						</label>
+						<input
+							id="site_title"
+							name="site_title"
+							type="text"
+							maxlength="200"
+							value={escapeHtml(settings.siteTitle)}
+							class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none focus:border-indigo-500"
+						/>
+					</div>
+					<div>
+						<label for="site_description" class="mb-1.5 block text-sm text-slate-400">
+							Site description
+						</label>
+						<textarea
+							id="site_description"
+							name="site_description"
+							rows="3"
+							maxlength="500"
+							class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none focus:border-indigo-500"
+						>{settings.siteDescription}</textarea>
+					</div>
+					<div>
+						<label for="logo" class="mb-1.5 block text-sm text-slate-400">
+							Logo URL
+						</label>
+						<input
+							id="logo"
+							name="logo"
+							type="url"
+							value={escapeHtml(settings.logo)}
+							placeholder="https://..."
+							class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none focus:border-indigo-500"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
+				<h2 class="text-sm font-semibold text-slate-200">Tích hợp</h2>
+				<div class="mt-4 space-y-4">
+					<div>
+						<label for="ga_id" class="mb-1.5 block text-sm text-slate-400">
+							Google Analytics ID (G-XXXXXXXX)
+						</label>
+						<input
+							id="ga_id"
+							name="ga_id"
+							type="text"
+							maxlength="50"
+							value={escapeHtml(settings.gaId)}
+							placeholder="G-XXXXXXXXXX"
+							class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 font-mono text-sm text-white outline-none focus:border-indigo-500"
+						/>
+						<p class="mt-1 text-xs text-slate-500">Để trống để tắt Google Analytics.</p>
+					</div>
+					<div>
+						<label for="contact_email" class="mb-1.5 block text-sm text-slate-400">
+							Email nhận thông báo liên hệ
+						</label>
+						<input
+							id="contact_email"
+							name="contact_email"
+							type="email"
+							value={escapeHtml(settings.contactEmail)}
+							placeholder="admin@example.com"
+							class="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2.5 text-white outline-none focus:border-indigo-500"
+						/>
+						<p class="mt-1 text-xs text-slate-500">
+							Cần EMAIL_API_KEY trong secrets để gửi email (Resend).
+						</p>
+					</div>
+				</div>
+			</div>
+
+			<div
+				id="settings-message"
+				class="hidden rounded-lg border px-4 py-3 text-sm"
+				role="alert"
+			>
+			</div>
+
+			<button
+				type="submit"
+				id="settings-submit"
+				class="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+			>
+				Lưu cấu hình
+			</button>
+		</form>
+
+		<script>
+			import { initSettingsForm } from '../../../scripts/settings-form';
+			initSettingsForm();
+		</script>
+	</AdminLayout>
+</AuthGuard>

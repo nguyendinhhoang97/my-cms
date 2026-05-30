@@ -1,0 +1,21 @@
+---
+/**
+ * CRUD Tags — giao diện admin.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import TaxonomyCrud from '../../../components/admin/TaxonomyCrud.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getAllTags } from '../../../lib/db/tags';
+import { getDb } from '../../../lib/db';
+
+export const prerender = false;
+
+const db = getDb();
+const items = await getAllTags(db);
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Tags" description="Quản lý thẻ bài viết">
+		<TaxonomyCrud type="tags" items={items} />
+	</AdminLayout>
+</AuthGuard>

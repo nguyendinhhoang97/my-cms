@@ -1,0 +1,54 @@
+---
+/**
+ * Trang chủ blog — bài published, phân trang 10/trang.
+ */
+import BlogLayout from '../layouts/BlogLayout.astro';
+import JsonLd from '../components/JsonLd.astro';
+import PostCard from '../components/blog/PostCard.astro';
+import Pagination from '../components/Pagination.astro';
+import { getDb } from '../lib/db';
+import { getAllPosts } from '../lib/db/posts';
+import { SITE, absoluteUrl } from '../lib/seo/config';
+
+export const prerender = false;
+
+const origin = Astro.url.origin;
+const db = getDb();
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+const limit = 10;
+
+const { items, pagination } = await getAllPosts(db, page, limit, 'published');
+const canonical =
+	page > 1 ? absoluteUrl(origin, `/?page=${page}`) : absoluteUrl(origin, '/');
+---
+
+<BlogLayout
+	title={SITE.title}
+	description={SITE.description}
+	url={canonical}
+	type="website"
+	keywords={['blog', 'tin tức', 'bài viết']}
+>
+	<JsonLd slot="jsonld" kind="website" origin={origin} />
+
+	<section>
+		<div class="mb-10 text-center">
+			<h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Blog my-cms</h1>
+			<p class="mt-2 opacity-70">Chia sẻ kiến thức, công nghệ và trải nghiệm.</p>
+		</div>
+
+		{
+			items.length === 0 ? (
+				<p class="py-16 text-center opacity-60">Chưa có bài viết nào được xuất bản.</p>
+			) : (
+				<div class="space-y-6">
+					{items.map((post) => (
+						<PostCard post={post} />
+					))}
+				</div>
+			)
+		}
+
+		<Pagination page={pagination.page} totalPages={pagination.totalPages} baseUrl="/" />
+	</section>
+</BlogLayout>

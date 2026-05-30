@@ -1,0 +1,211 @@
+---
+/**
+ * Layout blog công khai — header, footer, dark mode, SEO mặc định.
+ */
+import '../styles/global.css';
+import '../styles/blog.css';
+import SEO, { type SEOProps } from '../components/SEO.astro';
+import GoogleAnalytics from '../components/GoogleAnalytics.astro';
+import NewsletterForm from '../components/NewsletterForm.astro';
+import { getDb } from '../lib/db';
+import { getSiteSettings } from '../lib/db/settings';
+
+interface Props extends SEOProps {}
+
+const seoProps = Astro.props;
+const origin = Astro.url.origin;
+const csrfToken = Astro.locals.csrfToken;
+const currentPath = Astro.url.pathname;
+
+const db = getDb();
+const siteSettings = await getSiteSettings(db);
+
+const nav = [
+	{ href: '/', label: 'Home' },
+	{ href: '/categories', label: 'Categories' },
+	{ href: '/tags', label: 'Tags' },
+	{ href: '/about', label: 'About' },
+	{ href: '/contact', label: 'Liên hệ' },
+];
+
+const seoWithDefaults = {
+	...seoProps,
+	title: seoProps.title ?? siteSettings.siteTitle,
+	description: seoProps.description ?? siteSettings.siteDescription,
+};
+---
+
+<!doctype html>
+<html lang="vi" class="blog-light">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<SEO {...seoWithDefaults} origin={origin} />
+		<GoogleAnalytics gaId={siteSettings.gaId} />
+		<meta name="csrf-token" content={csrfToken} />
+		<slot name="head" />
+		<script is:inline>
+			(function () {
+				const stored = localStorage.getItem('blog-theme');
+				const dark = stored === 'dark' || (!stored && matchMedia('(prefers-color-scheme: dark)').matches);
+				document.documentElement.classList.toggle('blog-dark', dark);
+				document.documentElement.classList.toggle('blog-light', !dark);
+			})();
+		</script>
+	</head>
+	<body class="blog-body flex min-h-screen flex-col">
+		<div id="mobile-backdrop" class="fixed inset-0 z-40 hidden bg-black/50 lg:hidden"></div>
+
+		<header
+			class="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90"
+		>
+			<div class="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
+				<a href="/" class="flex items-center gap-2 text-xl font-bold tracking-tight">
+					{
+						siteSettings.logo ? (
+							<img src={siteSettings.logo} alt="" class="h-8 w-auto" />
+						) : null
+					}
+					{siteSettings.siteTitle.split(' ')[0] ?? 'my-cms'}
+				</a>
+
+				<nav class="hidden items-center gap-6 lg:flex" aria-label="Chính">
+					{
+						nav.map((item) => (
+							<a
+								href={item.href}
+								class:list={[
+									'text-sm font-medium transition hover:text-indigo-500',
+									currentPath === item.href ||
+									(item.href !== '/' && currentPath.startsWith(item.href))
+										? 'text-indigo-600 dark:text-indigo-400'
+										: 'opacity-70',
+								]}
+							>
+								{item.label}
+							</a>
+						))
+					}
+				</nav>
+
+				<div class="flex items-center gap-2">
+					<a
+						href="/search"
+						class="rounded-lg p-2 opacity-70 hover:bg-slate-100 dark:hover:bg-slate-800"
+						aria-label="Tìm kiếm"
+					>
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+						</svg>
+					</a>
+					<a
+						href="/rss.xml"
+						class="hidden rounded-lg p-2 opacity-70 hover:bg-slate-100 dark:hover:bg-slate-800 sm:block"
+						aria-label="RSS Feed"
+						title="RSS"
+					>
+						<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+							<path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.6 7.38 21 6.18 21 5 21 4 19.6 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"></path>
+						</svg>
+					</a>
+					<button
+						type="button"
+						id="theme-toggle"
+						class="rounded-lg p-2 opacity-70 hover:bg-slate-100 dark:hover:bg-slate-800"
+						aria-label="Đổi theme"
+					>
+						<span id="theme-icon">🌙</span>
+					</button>
+					<button
+						type="button"
+						id="mobile-menu-btn"
+						class="rounded-lg p-2 lg:hidden"
+						aria-label="Menu"
+					>
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 6h16M4 12h16M4 18h16"></path>
+						</svg>
+					</button>
+				</div>
+			</div>
+
+			<nav
+				id="mobile-nav"
+				class="hidden border-t border-slate-200 px-4 py-3 dark:border-slate-800 lg:hidden"
+			>
+				{
+					nav.map((item) => (
+						<a
+							href={item.href}
+							class="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+						>
+							{item.label}
+						</a>
+					))
+				}
+			</nav>
+		</header>
+
+		<main class="mx-auto w-full max-w-5xl flex-1 px-4 py-8 lg:py-12">
+			<slot name="jsonld" />
+			<slot />
+		</main>
+
+		<footer class="border-t border-slate-200 py-10 dark:border-slate-800">
+			<div class="mx-auto max-w-5xl px-4">
+				<div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
+					<NewsletterForm csrfToken={csrfToken} />
+					<div class="text-sm opacity-60">
+						<p>© {new Date().getFullYear()} {siteSettings.siteTitle}</p>
+						<div class="mt-3 flex flex-wrap gap-4">
+							<a href="/rss.xml" class="hover:text-indigo-500">RSS</a>
+							<a href="/contact" class="hover:text-indigo-500">Liên hệ</a>
+							<a href="/search" class="hover:text-indigo-500">Search</a>
+							<a href="/admin" class="hover:text-indigo-500">Admin</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			const html = document.documentElement;
+			const themeBtn = document.getElementById('theme-toggle');
+			const themeIcon = document.getElementById('theme-icon');
+			const mobileBtn = document.getElementById('mobile-menu-btn');
+			const mobileNav = document.getElementById('mobile-nav');
+			const backdrop = document.getElementById('mobile-backdrop');
+
+			function syncIcon() {
+				if (!themeIcon) return;
+				themeIcon.textContent = html.classList.contains('blog-dark') ? '☀️' : '🌙';
+			}
+			syncIcon();
+
+			themeBtn?.addEventListener('click', () => {
+				const dark = !html.classList.contains('blog-dark');
+				html.classList.toggle('blog-dark', dark);
+				html.classList.toggle('blog-light', !dark);
+				localStorage.setItem('blog-theme', dark ? 'dark' : 'light');
+				syncIcon();
+			});
+
+			mobileBtn?.addEventListener('click', () => {
+				mobileNav?.classList.toggle('hidden');
+				backdrop?.classList.toggle('hidden');
+			});
+			backdrop?.addEventListener('click', () => {
+				mobileNav?.classList.add('hidden');
+				backdrop?.classList.add('hidden');
+			});
+		</script>
+	</body>
+</html>

@@ -1,0 +1,184 @@
+---
+/**
+ * Quản lý liên hệ — xem danh sách, đánh dấu đã xử lý.
+ */
+import AuthGuard from '../../../components/AuthGuard.astro';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { countPendingContacts, listContacts } from '../../../lib/db/contacts';
+import { getDb } from '../../../lib/db';
+import { escapeHtml } from '../../../lib/security';
+import type { ContactStatus } from '../../../../db/schema';
+
+export const prerender = false;
+
+const db = getDb();
+const statusParam = Astro.url.searchParams.get('status');
+const statusFilter: ContactStatus | undefined =
+	statusParam === 'pending' || statusParam === 'handled' ? statusParam : undefined;
+const page = Math.max(1, Number(Astro.url.searchParams.get('page') ?? '1') || 1);
+
+const [{ items, pagination }, pendingTotal] = await Promise.all([
+	listContacts(db, statusFilter, page, 20),
+	countPendingContacts(db),
+]);
+
+function formatDate(iso: string): string {
+	try {
+		return new Date(iso).toLocaleString('vi-VN');
+	} catch {
+		return '—';
+	}
+}
+
+function tabUrl(status?: ContactStatus, p = 1): string {
+	const params = new URLSearchParams();
+	if (status) params.set('status', status);
+	if (p > 1) params.set('page', String(p));
+	const q = params.toString();
+	return q ? `/admin/contacts?${q}` : '/admin/contacts';
+}
+---
+
+<AuthGuard role="admin">
+	<AdminLayout title="Liên hệ" description={`${pendingTotal} tin nhắn chờ xử lý`}>
+		<div class="mb-6 flex flex-wrap gap-2">
+			<a
+				href={tabUrl()}
+				class:list={[
+					'rounded-lg px-3 py-1.5 text-sm font-medium',
+					!statusFilter ? 'bg-indigo-600 text-white' : 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+				]}
+			>
+				Tất cả
+			</a>
+			<a
+				href={tabUrl('pending')}
+				class:list={[
+					'rounded-lg px-3 py-1.5 text-sm font-medium',
+					statusFilter === 'pending'
+						? 'bg-indigo-600 text-white'
+						: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+				]}
+			>
+				Chờ xử lý ({pendingTotal})
+			</a>
+			<a
+				href={tabUrl('handled')}
+				class:list={[
+					'rounded-lg px-3 py-1.5 text-sm font-medium',
+					statusFilter === 'handled'
+						? 'bg-indigo-600 text-white'
+						: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+				]}
+			>
+				Đã xử lý
+			</a>
+		</div>
+
+		<div class="overflow-x-auto rounded-xl border border-slate-800">
+			<table class="w-full min-w-[640px] text-left text-sm">
+				<thead class="border-b border-slate-800 bg-slate-900/80 text-slate-400">
+					<tr>
+						<th class="px-4 py-3 font-medium">Người gửi</th>
+						<th class="px-4 py-3 font-medium">Nội dung</th>
+						<th class="px-4 py-3 font-medium">Trạng thái</th>
+						<th class="px-4 py-3 font-medium">Thời gian</th>
+						<th class="px-4 py-3 font-medium">Thao tác</th>
+					</tr>
+				</thead>
+				<tbody id="contacts-tbody" class="divide-y divide-slate-800">
+					{
+						items.map((c) => (
+							<tr data-contact-id={c.id} class="bg-slate-900/40">
+								<td class="px-4 py-3 align-top">
+									<p class="font-medium text-slate-200">{escapeHtml(c.name)}</p>
+									<a
+										href={`mailto:${c.email}`}
+										class="text-xs text-indigo-400 hover:underline"
+									>
+										{escapeHtml(c.email)}
+									</a>
+								</td>
+								<td class="max-w-xs px-4 py-3 align-top">
+									<p class="whitespace-pre-wrap text-slate-300">{escapeHtml(c.message)}</p>
+								</td>
+								<td class="px-4 py-3 align-top">
+									<span
+										class:list={[
+											'inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+											c.status === 'pending'
+												? 'bg-amber-500/15 text-amber-300 ring-amber-500/30'
+												: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
+										]}
+									>
+										{c.status === 'pending' ? 'Chờ xử lý' : 'Đã xử lý'}
+									</span>
+								</td>
+								<td class="whitespace-nowrap px-4 py-3 align-top text-slate-500">
+									{formatDate(c.createdAt)}
+								</td>
+								<td class="px-4 py-3 align-top">
+									<div class="flex flex-wrap gap-2">
+										{
+											c.status === 'pending' && (
+												<button
+													type="button"
+													data-contact-action="handle"
+													data-contact-id={c.id}
+													class="rounded-lg bg-emerald-600/20 px-2.5 py-1 text-xs font-medium text-emerald-300 hover:bg-emerald-600/30"
+												>
+													Đã xử lý
+												</button>
+											)
+										}
+										<button
+											type="button"
+											data-contact-action="delete"
+											data-contact-id={c.id}
+											class="rounded-lg bg-red-600/20 px-2.5 py-1 text-xs font-medium text-red-300 hover:bg-red-600/30"
+										>
+											Xóa
+										</button>
+									</div>
+								</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+			<p
+				id="contacts-empty"
+				class:list={['px-4 py-12 text-center text-slate-500', items.length > 0 && 'hidden']}
+			>
+				Không có liên hệ nào.
+			</p>
+		</div>
+
+		{
+			pagination.totalPages > 1 && (
+				<nav class="mt-6 flex justify-center gap-2">
+					{
+						Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+							<a
+								href={tabUrl(statusFilter, p)}
+								class:list={[
+									'rounded-lg px-3 py-1.5 text-sm',
+									p === pagination.page
+										? 'bg-indigo-600 text-white'
+										: 'border border-slate-700 text-slate-400 hover:bg-slate-800',
+								]}
+							>
+								{p}
+							</a>
+						))
+					}
+				</nav>
+			)
+		}
+
+		<script>
+			import { initContactsAdmin } from '../../../scripts/contacts-admin';
+			initContactsAdmin();
+		</script>
+	</AdminLayout>
+</AuthGuard>
